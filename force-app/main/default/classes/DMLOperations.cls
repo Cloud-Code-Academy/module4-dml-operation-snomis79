@@ -17,7 +17,7 @@
  * The methods within this class serve as practical examples of different DML operations,
  * allowing developers to learn through practice and examples.
  *
- * @author Your Name
+ * @author Simon Lapointe
  */
 
 
@@ -31,13 +31,13 @@ public with sharing class DMLOperations {
      */
     public static Id insertNewAccount() {
         // Create a new Account instance
-
+        Account myAccount = new Account();
         // Set some fields on the Account
-
+        myAccount.name = 'ST Enterprise';
         // Insert the Account into the database
-
+        insert myAccount;
         // Return the Id of the newly created Account
-        return null;
+        return myAccount.Id;
     }
 
     /**
@@ -48,8 +48,9 @@ public with sharing class DMLOperations {
      */
     public static void createAccount(String name, String industry) {
         // Create a new Account and set the fields inline
-
+        Account myOtherAccount = new Account(Name = name, Industry = industry);
         // Insert the Account
+        insert myOtherAccount;
     }
 
     
@@ -59,17 +60,19 @@ public with sharing class DMLOperations {
      * @param accountId The Id of the Account to link the Contact to.
      * @return The Id of the newly created Contact.
      */
-    public static Id insertNewContact(Id accountId) {
+     public static Id insertNewContact(Id accountId) {
         // Create a new Contact instance
-
+        Contact newContact = new Contact(AccountId = accountId);
         // Set some fields on the Contact
+        newContact.LastName = 'Zappa';
+        newContact.FirstName = 'Frank';
         // Set the AccountId field to the given accountId
-
+        //SL: AccountId set above on line 65
         // Insert the Contact into the database
-
+        insert newContact;
         // Return the Id of the newly created Contact
-        return null;
-    }
+        return newContact.Id;
+     }
 
     /**
      * Question 4
@@ -81,10 +84,11 @@ public with sharing class DMLOperations {
     public static void updateContactLastName(Id contactId, String newLastName) {
         // Retrieve the Contact from the database
         // [SELECT Id FROM Contact WHERE Id = :contactId]
-
+        Contact retrievedContact = [SELECT Id, LastName FROM Contact WHERE Id = :contactId];
         // Update the Contact's last name
-
+        retrievedContact.LastName = newLastName;
         // Update the Contact in the database
+        update retrievedContact;
     }
 
     /**
@@ -97,10 +101,11 @@ public with sharing class DMLOperations {
     public static void updateOpportunityStage(Id oppId, String newStage) {
         // Retrieve the Opportunity from the database
         // [SELECT Id FROM Opportunity WHERE Id = :oppId]
-
+        Opportunity myOpp = [SELECT Id, StageName FROM Opportunity WHERE Id = :oppId];
         // Update the Opportunity's stage
-
+        myOpp.StageName = newStage;
         // Update the Opportunity in the database
+        update myOpp;
     }
 
     /**
@@ -114,8 +119,11 @@ public with sharing class DMLOperations {
     public static void updateAccountFields(Id accountId, String newName, String newIndustry) {
         // Query the account
         // [SELECT Id FROM Account WHERE Id = :accountId]
-
+        Account myAccount = [SELECT Id, Name, Industry FROM Account WHERE Id = :accountId];
         // Update the Account with the given Id with the new name and industry
+        myAccount.Name = newName;
+        myAccount.Industry = newIndustry;
+        update myAccount;
     }
 
 
@@ -128,11 +136,20 @@ public with sharing class DMLOperations {
      * @param list of Opportunities to be changed then upserted.
      */
     public static void upsertOpportunityList(List<Opportunity> opportunities) {
+        String newStage = 'Qualification';
+        Date newDate = Date.today().addMonths(3);
+        Decimal newAmount = 50000;
         // Loop through each Opportunity in the list
             // Set the Opportunity's Stage to Qualification
             // Set the Opportunity's Close Date to 3 months from today
             // Set the Opportunity's Amount to 50000
+        for (Opportunity opp : opportunities){
+            opp.StageName = newStage;
+            opp.CloseDate = newDate;
+            opp.Amount = newAmount;
+        }
         // Upsert the opportunities List so that records are either updated or created
+        upsert opportunities;
     }
 
     /**
