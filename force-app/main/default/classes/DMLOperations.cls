@@ -152,20 +152,53 @@ public with sharing class DMLOperations {
         upsert opportunities;
     }
 
-    /**
-     * Question 8
-     * Insert or updates opportunities from list of names.
-     * Associate the Opportunities with account that has the name accountName.
-     * There should be an Opportunity for each name provided in the list.
-     * HINT: The account may or may not exists in the database but is required for opportunity creation. Consider how upsert operation can help with this.
-     * @param accountName The name of the Account.
-     * @param oppNames The list of Opportunity names.
-     */
     public static void upsertOpportunities(String accountName, List<String> oppNames) {
-        // Loop through each Opportunity name
-            // Create an Opportunity with the given name
-            // Add the Opportunity to the list
+        // Query for the account
+        List<Account> accList = [SELECT Id, Name FROM Account WHERE Name = :accountName LIMIT 1];
+        Account accProvided;
+        
+        if (accList.isEmpty()) {
+            // No account found, so create a new one
+            accProvided = new Account(Name = accountName);
+            insert accProvided;
+        } else {
+            // Use the existing account
+            accProvided = accList[0];
+        }
+    
+        // Initialize the map to store existing Opportunities
+        Map<String, Opportunity> exOppos = new Map<String, Opportunity>();
+    
+        // Query for existing Opportunities with the provided names
+        List<Opportunity> existingOpps = [SELECT Id, Name FROM Opportunity WHERE Name IN :oppNames];
+        for (Opportunity opp : existingOpps) {
+            exOppos.put(opp.Name, opp);
+        }
+    
+        // Loop through the provided Opportunity names
+        for (String oppName : oppNames) {
+            if (exOppos.containsKey(oppName)) {
+                // Update the existing Opportunity
+                Opportunity existingOpp = exOppos.get(oppName);
+                existingOpp.AccountId = accProvided.Id;
+                existingOpp.StageName = 'Qualification';
+                existingOpp.CloseDate = Date.today().addMonths(3);
+            } else {
+                // Create a new Opportunity
+                Opportunity newOpp = new Opportunity(
+                    Name = oppName, 
+                    AccountId = accProvided.Id,
+                    StageName = 'Qualification',
+                    CloseDate = Date.today().addMonths(3)
+                );
+                exOppos.put(oppName, newOpp);
+            }
+        }
+    
+        // Upsert the Opportunities
+        upsert exOppos.values();
     }
+    
     
     /**
      * Question 9
@@ -177,14 +210,17 @@ public with sharing class DMLOperations {
 	 */
 	public static Account upsertAccount(String accountName) {
 		// Query for the Account
-		List<Account> accounts = [SELECT Id FROM Account WHERE Name = :accountName];
-
-		// if the Account exists, update the description
-
-		// otherwise, create a new Account and set the description
-
-		// Upsert the Account
-		return null;
+		List<Account> accounts = [SELECT Id, Name FROM Account WHERE Name = :accountName];
+        if(accounts.isEmpty()){
+            System.debug('Account not found');
+            Account acc = new Account(Name = accountName, Description = 'New Account');
+        }
+        else{
+            acc = accounts[0];
+            acc.Description = 'Updated Account';
+        }
+        upsert acc;
+        return acc;
 	}
 
     /**
