@@ -143,6 +143,16 @@
         // Upsert the opportunities List so that records are either updated or created
         upsert opportunities;
     }
+
+    /**
+     * Question 8
+     * Insert or updates opportunities from list of names.
+     * Associate the Opportunities with account that has the name accountName.
+     * There should be an Opportunity for each name provided in the list.
+     * HINT: The account may or may not exists in the database but is required for opportunity creation. Consider how upsert operation can help with this.
+     * @param accountName The name of the Account.
+     * @param oppNames The list of Opportunity names.
+     */
     public static void upsertOpportunities(String accountName, List<String> oppNames) {
         // Query for the account
         List<Account> accList = [SELECT Id, Name FROM Account WHERE Name = :accountName LIMIT 1];
@@ -161,31 +171,34 @@
         Map<String, Opportunity> exOppos = new Map<String, Opportunity>();
     
         // Query for existing Opportunities with the provided names
-        List<Opportunity> existingOpps = [SELECT Id, Name FROM Opportunity WHERE Name IN :oppNames];
+        List<Opportunity> existingOpps = [SELECT Id, Name FROM Opportunity WHERE Name IN :oppNames AND AccountId = :accProvided.Id];
         for (Opportunity opp : existingOpps) {
             exOppos.put(opp.Name, opp);
         }
     
+        // Create a list to hold Opportunities to upsert
+        List<Opportunity> oppsToUpsert = new List<Opportunity>();
     
-        // Loop through the provided Opportunity names
+        // Process each Opportunity name
         for (String oppName : oppNames) {
+            Opportunity opp;
             if (exOppos.containsKey(oppName)) {
-                // Update the existing Opportunity
-                Opportunity existingOpp = exOppos.get(oppName);
-                existingOpp.AccountId = accProvided.Id;
-                existingOpp.StageName = 'Qualification';
-                existingOpp.CloseDate = Date.today().addMonths(3);
+                // If the Opportunity exists, use it
+                opp = exOppos.get(oppName);
             } else {
-                // Create a new Opportunity
-                Opportunity newOpp = new Opportunity(
-                    Name = oppName, 
+                // If the Opportunity doesn't exist, create a new one
+                opp = new Opportunity(
+                    Name = oppName,
                     AccountId = accProvided.Id,
-                    StageName = 'Qualification',
-                    CloseDate = Date.today().addMonths(3)
+                    StageName = 'Prospecting',  // Set a default stage
+                    CloseDate = Date.today().addDays(30)  // Set a default close date
                 );
-                exOppos.put(oppName, newOpp);
             }
+            oppsToUpsert.add(opp);
         }
+    
+        // Perform the upsert operation
+        upsert oppsToUpsert;
     }
     /**
      * Question 9
